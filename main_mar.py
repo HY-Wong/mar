@@ -4,6 +4,8 @@ import numpy as np
 import os
 import time
 from pathlib import Path
+from omegaconf import OmegaConf
+from pytorch_wavelets import DWTForward, DWTInverse
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -43,6 +45,8 @@ def get_args_parser():
                         help='tokenizer stride, default use KL16')
     parser.add_argument('--patch_size', default=1, type=int,
                         help='number of tokens to group as a patch.')
+    parser.add_argument('--vae_type', default='marvae', type=str,
+                        help='"marvae", "vavae", "vavae-high-low"')
 
     # Generation parameters
     parser.add_argument('--num_iter', default=64, type=int,
@@ -184,10 +188,52 @@ def main(args):
         drop_last=True,
     )
 
+    dwt = None
+    idwt = None
+
     # define the vae and mar model
-    vae = AutoencoderKL(embed_dim=args.vae_embed_dim, ch_mult=(1, 1, 2, 2, 4), ckpt_path=args.vae_path).cuda().eval()
-    for param in vae.parameters():
-        param.requires_grad = False
+    if args.vae_type == 'marvae':
+        vae = AutoencoderKL(
+            embed_dim=args.vae_embed_dim,
+            ddconfig={'z_channels': 16, 'ch_mult': (1, 1, 2, 2, 4)}, 
+            ckpt_path=args.vae_path
+        ).cuda().eval()
+        for param in vae.parameters():
+            param.requires_grad = False
+    elif args.vae_type == 'vavae':
+        config = OmegaConf.load('vavae/configs/vavae_f16d32.yaml')
+        vae = AutoencoderKL(
+            embed_dim=config.model.params.embed_dim,
+            ddconfig=config.model.params.ddconfig,
+            ckpt_path='/BS/var/work/LightningDiT/vavae-imagenet256-f16d32-dinov2.pt',
+            model_type='vavae',
+        ).cuda().eval()
+        for param in vae.parameters():
+            param.requires_grad = False
+    elif args.vae_type == 'vavae-high-low':
+        config_high = OmegaConf.load('vavae/configs/f16d32_vfdinov2_high.yaml')
+        vae_high = AutoencoderKL(
+            embed_dim=config_high.model.params.embed_dim,
+            ddconfig=config_high.model.params.ddconfig,
+            ckpt_path='/BS/var/work/LightningDiT/vavae/logs/f16d32_vfdinov2_high/checkpoints/last.ckpt',
+            model_type='vavae',
+        ).cuda().eval()
+        for param in vae_high.parameters():
+            param.requires_grad = False
+        
+        config_low = OmegaConf.load('vavae/configs/f16d32_vfdinov2_low.yaml')
+        vae_low = AutoencoderKL(
+            embed_dim=config_low.model.params.embed_dim, 
+            ddconfig=config_low.model.params.ddconfig,
+            ckpt_path='/BS/var/work/LightningDiT/vavae/logs/f16d32_vfdinov2_low/checkpoints/last.ckpt',
+            model_type='vavae',
+        ).cuda().eval()
+        for param in vae_low.parameters():
+            param.requires_grad = False
+        
+        vae = {'high': vae_high, 'low': vae_low}
+        dwt = DWTForward(J=1, wave='haar', mode='zero').cuda()
+        idwt = DWTInverse('haar', mode='zero').cuda()
 
     model = mar.__dict__[args.model](
         img_size=args.img_size,
@@ -236,7 +282,7 @@ def main(args):
 
     # resume training
     if args.resume and os.path.exists(os.path.join(args.resume, "checkpoint-last.pth")):
-        checkpoint = torch.load(os.path.join(args.resume, "checkpoint-last.pth"), map_location='cpu')
+        checkpoint = torch.load(os.path.join(args.resume, "checkpoint-last.pth"), map_location='cpu', weights_only=False)
         model_without_ddp.load_state_dict(checkpoint['model'])
         model_params = list(model_without_ddp.parameters())
         ema_state_dict = checkpoint['model_ema']
@@ -259,7 +305,7 @@ def main(args):
     if args.evaluate:
         torch.cuda.empty_cache()
         evaluate(model_without_ddp, vae, ema_params, args, 0, batch_size=args.eval_bsz, log_writer=log_writer,
-                 cfg=args.cfg, use_ema=True)
+                 cfg=args.cfg, use_ema=True, idwt=idwt)
         return
 
     # training
@@ -275,7 +321,8 @@ def main(args):
             data_loader_train,
             optimizer, device, epoch, loss_scaler,
             log_writer=log_writer,
-            args=args
+            args=args,
+            dwt=dwt
         )
 
         # save checkpoint
@@ -287,10 +334,10 @@ def main(args):
         if args.online_eval and (epoch % args.eval_freq == 0 or epoch + 1 == args.epochs):
             torch.cuda.empty_cache()
             evaluate(model_without_ddp, vae, ema_params, args, epoch, batch_size=args.eval_bsz, log_writer=log_writer,
-                     cfg=1.0, use_ema=True)
+                     cfg=1.0, use_ema=True, idwt=idwt)
             if not (args.cfg == 1.0 or args.cfg == 0.0):
                 evaluate(model_without_ddp, vae, ema_params, args, epoch, batch_size=args.eval_bsz // 2,
-                         log_writer=log_writer, cfg=args.cfg, use_ema=True)
+                         log_writer=log_writer, cfg=args.cfg, use_ema=True, idwt=idwt)
             torch.cuda.empty_cache()
 
         if misc.is_main_process():

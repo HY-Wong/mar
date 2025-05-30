@@ -101,7 +101,11 @@ def main(args):
     )
 
     # define the vae
-    vae = AutoencoderKL(embed_dim=args.vae_embed_dim, ch_mult=(1, 1, 2, 2, 4), ckpt_path=args.vae_path).cuda().eval()
+    vae = AutoencoderKL(
+        embed_dim=16, 
+        ddconfig={'z_channels': 16, 'ch_mult': (1, 1, 2, 2, 4)},
+        ckpt_path=args.vae_path,
+    ).cuda().eval()
 
     # training
     print(f"Start caching VAE latents")

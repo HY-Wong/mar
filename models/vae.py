@@ -448,21 +448,32 @@ class DiagonalGaussianDistribution(object):
 
 
 class AutoencoderKL(nn.Module):
-    def __init__(self, embed_dim, ch_mult, use_variational=True, ckpt_path=None):
+    def __init__(
+        self, embed_dim, ddconfig, use_variational=True, ckpt_path=None, model_type='marvae',
+    ):
         super().__init__()
-        self.encoder = Encoder(ch_mult=ch_mult, z_channels=embed_dim)
-        self.decoder = Decoder(ch_mult=ch_mult, z_channels=embed_dim)
+        self.encoder = Encoder(**ddconfig)
+        self.decoder = Decoder(**ddconfig)
         self.use_variational = use_variational
         mult = 2 if self.use_variational else 1
         self.quant_conv = torch.nn.Conv2d(2 * embed_dim, mult * embed_dim, 1)
         self.post_quant_conv = torch.nn.Conv2d(embed_dim, embed_dim, 1)
         self.embed_dim = embed_dim
+        self.model_type = model_type
         if ckpt_path is not None:
             self.init_from_ckpt(ckpt_path)
 
     def init_from_ckpt(self, path):
-        sd = torch.load(path, map_location="cpu")["model"]
-        msg = self.load_state_dict(sd, strict=False)
+        if self.model_type == 'vavae':
+            sd = torch.load(path, map_location="cpu")
+            if 'state_dict' in sd.keys():
+                sd = sd['state_dict']
+            prefixes = ('encoder', 'decoder', 'quant_conv', 'post_quant_conv')
+            sd = {k: v for k, v in sd.items() if k.startswith(prefixes)}
+            msg = self.load_state_dict(sd, strict=False)
+        elif self.model_type == 'marvae':
+            sd = torch.load(path, map_location="cpu")["model"]
+            msg = self.load_state_dict(sd, strict=False)
         print("Loading pre-trained KL-VAE")
         print("Missing keys:")
         print(msg.missing_keys)

@@ -34,7 +34,8 @@ def train_one_epoch(model, vae,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
                     device: torch.device, epoch: int, loss_scaler,
                     log_writer=None,
-                    args=None):
+                    args=None,
+                    dwt=None):
     model.train(True)
     metric_logger = misc.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', misc.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -55,14 +56,43 @@ def train_one_epoch(model, vae,
         labels = labels.to(device, non_blocking=True)
 
         with torch.no_grad():
-            if args.use_cached:
-                moments = samples
-                posterior = DiagonalGaussianDistribution(moments)
-            else:
+            if args.vae_type == 'marvae':
+                if args.use_cached:
+                    moments = samples
+                    posterior = DiagonalGaussianDistribution(moments)
+                else:
+                    posterior = vae.encode(samples)
+
+                # normalize the std of latent to be 1. Change it if you use a different tokenizer
+                x = posterior.sample().mul_(0.2325)
+            elif args.vae_type == 'vavae':
                 posterior = vae.encode(samples)
 
-            # normalize the std of latent to be 1. Change it if you use a different tokenizer
-            x = posterior.sample().mul_(0.2325)
+                # normalize the std of latent to be 1. Change it if you use a different tokenizer
+                x = posterior.sample().mul_(0.2716)
+            elif args.vae_type == 'vavae-high-low':
+                # first level DWT
+                ll1, hs = dwt(samples)
+                
+                # high frequency components
+                vae_high = vae['high']
+                high = hs[0] / 2 # normalize
+                high = high.view(-1, 9, 128, 128)
+                posterior_high = vae_high.encode(high)
+
+                # normalize the std of latent to be 1. Change it if you use a different tokenizer
+                x_high = posterior_high.sample().mul_(0.9072)
+
+                # low frequency components
+                vae_low = vae['low']
+                low = ll1 / 2 # normalize
+                low = torch.nn.functional.interpolate(low, size=256, mode='bicubic', align_corners=False)
+                posterior_low = vae_low.encode(low)
+
+                # normalize the std of latent to be 1. Change it if you use a different tokenizer
+                x_low = posterior_low.sample().mul_(0.2917)
+
+                x = torch.cat([x_high, x_low], dim=1)
 
         # forward
         with torch.cuda.amp.autocast():
@@ -102,7 +132,7 @@ def train_one_epoch(model, vae,
 
 
 def evaluate(model_without_ddp, vae, ema_params, args, epoch, batch_size=16, log_writer=None, cfg=1.0,
-             use_ema=True):
+             use_ema=True, idwt=None):
     model_without_ddp.eval()
     num_steps = args.num_images // (batch_size * misc.get_world_size()) + 1
     save_folder = os.path.join(args.output_dir, "ariter{}-diffsteps{}-temp{}-{}cfg{}-image{}".format(args.num_iter,
@@ -156,7 +186,27 @@ def evaluate(model_without_ddp, vae, ema_params, args, epoch, batch_size=16, log
                 sampled_tokens = model_without_ddp.sample_tokens(bsz=batch_size, num_iter=args.num_iter, cfg=cfg,
                                                                  cfg_schedule=args.cfg_schedule, labels=labels_gen,
                                                                  temperature=args.temperature)
-                sampled_images = vae.decode(sampled_tokens / 0.2325)
+                if args.vae_type == 'marvae':
+                    sampled_images = vae.decode(sampled_tokens / 0.2325)
+                elif args.vae_type == 'vavae':
+                    sampled_images = vae.decode(sampled_tokens / 0.2716)
+                elif args.vae_type == 'vavae-high-low':
+                    sampled_tokens_high, sampled_tokens_low = torch.chunk(sampled_tokens, 2, dim=1)
+                    
+                    # high frequency components
+                    vae_high = vae['high']
+                    sampled_high = vae_high.decode(sampled_tokens_high / 0.9072)
+                    sampled_high = sampled_high.view(-1, 3, 3, 128, 128)
+                    sampled_high = sampled_high * 2 # denormalize
+
+                    # low frequency components
+                    vae_low = vae['low']
+                    sampled_low = vae_low.decode(sampled_tokens_low / 0.2917)
+                    sampled_low = torch.nn.functional.interpolate(sampled_low, size=128, mode='bicubic', align_corners=False)
+                    sampled_low = sampled_low * 2 # denormalize
+                    
+                    # reconstruct images from wavelet components
+                    sampled_images = idwt((sampled_low, [sampled_high]))
 
         # measure speed after the first generation batch
         if i >= 1:
