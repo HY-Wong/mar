@@ -205,7 +205,7 @@ def main(args):
         vae = AutoencoderKL(
             embed_dim=config.model.params.embed_dim,
             ddconfig=config.model.params.ddconfig,
-            ckpt_path='/BS/var/work/LightningDiT/vavae-imagenet256-f16d32-dinov2.pt',
+            ckpt_path='/path/to/LightningDiT/vavae-imagenet256-f16d32-dinov2.pt',
             model_type='vavae',
         ).cuda().eval()
         for param in vae.parameters():
@@ -215,7 +215,7 @@ def main(args):
         vae_high = AutoencoderKL(
             embed_dim=config_high.model.params.embed_dim,
             ddconfig=config_high.model.params.ddconfig,
-            ckpt_path='/BS/var/work/LightningDiT/vavae/logs/f16d32_vfdinov2_high/checkpoints/last.ckpt',
+            ckpt_path='/path/to/LightningDiT/vavae/logs/f16d32_vfdinov2_high/checkpoints/last.ckpt',
             model_type='vavae',
         ).cuda().eval()
         for param in vae_high.parameters():
@@ -225,7 +225,7 @@ def main(args):
         vae_low = AutoencoderKL(
             embed_dim=config_low.model.params.embed_dim, 
             ddconfig=config_low.model.params.ddconfig,
-            ckpt_path='/BS/var/work/LightningDiT/vavae/logs/f16d32_vfdinov2_low/checkpoints/last.ckpt',
+            ckpt_path='/path/to/LightningDiT/vavae/logs/f16d32_vfdinov2_low/checkpoints/last.ckpt',
             model_type='vavae',
         ).cuda().eval()
         for param in vae_low.parameters():

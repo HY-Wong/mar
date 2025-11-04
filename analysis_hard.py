@@ -22,7 +22,7 @@ from models.vae import AutoencoderKL
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('VAE Analysis', add_help=False)
     parser.add_argument('--batch_size', default=10, type=int)
-    parser.add_argument('--data_path', default='/BS/var/nobackup/imagenet-1k/', type=str)
+    parser.add_argument('--data_path', default='/path/to/imagenet-1k/', type=str)
     parser.add_argument('--resos', default=256, type=int)
     args = parser.parse_args()
     device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     clip, preprocess_clip = clip.load('ViT-B/32', device=device)
     clip.eval()
     
-    sam = sam_model_registry['vit_b'](checkpoint='/BS/var/work/segment-anything/sam_vit_b_01ec64.pth')
+    sam = sam_model_registry['vit_b'](checkpoint='/path/to/sam_vit_b_01ec64.pth')
     sam = sam.to(device).eval()
     sam_predictor = SamPredictor(sam)
 
@@ -137,7 +137,8 @@ if __name__ == '__main__':
             for key, rec_imgs in zip(keys, rec_imgs_list):
                 visualize_imgs[key].append(rec_imgs)
 
-    save_dir = '/BS/var/work/analysis_figures'
+    save_dir = 'outputs/analysis_figures'
+    os.makedirs(save_dir, exist_ok=True)
     
     suffixes = ['', '_ll1', '_lh1', '_hl1', '_hh1']
     for key, suffix in zip(visualize_imgs.keys(), suffixes): 

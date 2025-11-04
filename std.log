@@ -14,7 +14,7 @@ Missing keys:
 []
 Unexpected keys:
 []
-Restored from /BS/var/work/LightningDiT/vavae-imagenet256-f16d32-dinov2.pt
+Restored from /path/to/LightningDiT/vavae-imagenet256-f16d32-dinov2.pt
 prepare finished.
 std: 3.681655, scale_factor: 0.271617
 
@@ -24,7 +24,7 @@ Missing keys:
 []
 Unexpected keys:
 []
-Restored from /BS/var/work/LightningDiT/vavae/logs/f16d32_vfdinov2_high/checkpoints/last.ckpt
+Restored from /path/to/LightningDiT/vavae/logs/f16d32_vfdinov2_high/checkpoints/last.ckpt
 prepare finished.
 std: 1.102338, scale_factor: 0.907163
 
@@ -34,6 +34,6 @@ Missing keys:
 []
 Unexpected keys:
 []
-Restored from /BS/var/work/LightningDiT/vavae/logs/f16d32_vfdinov2_low/checkpoints/last.ckpt
+Restored from /path/to/LightningDiT/vavae/logs/f16d32_vfdinov2_low/checkpoints/last.ckpt
 prepare finished.
 std: 3.427778, scale_factor: 0.291734

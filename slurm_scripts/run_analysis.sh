@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH -p gpu17
-#SBATCH --gres gpu:2
-#SBATCH --nodes 2
-#SBATCH --ntasks-per-node 2
-#SBATCH -t 0-01:00:0
+#SBATCH -p <partition_name> 
+#SBATCH --gres gpu:<num_gpus>
+#SBATCH --nodes <num_nodes> 
+#SBATCH --ntasks-per-node <tasks_per_node>
+#SBATCH -t <days>-<hours>:<minutes>:<seconds>
 
 # activate Conda environment
 source ~/.bashrc
-conda activate ldm-new
+conda activate ldm
 
 cd ..
 

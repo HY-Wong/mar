@@ -52,11 +52,11 @@ data:
     train:
       target: ldm.data.imagenet.ImageNetTrain
       params:
-        data_root: /BS/var/nobackup/imagenet-1k/
+        data_root: /path/to/imagenet-1k
     validation:
       target: ldm.data.imagenet.ImageNetValidation
       params:
-        data_root: /BS/var/nobackup/imagenet-1k/
+        data_root: /path/to/imagenet-1k
 
 lightning:
   trainer:

@@ -31,14 +31,14 @@ model = mar.__dict__['mar_large'](
     diffusion_batch_mul=4,
 ).to(device)
 
-state_dict = torch.load('/BS/var/work/mar/output_dir/checkpoint-last.pth', weights_only=False)["model_ema"]
+state_dict = torch.load('output_dir/checkpoint-last.pth', weights_only=False)["model_ema"]
 model.load_state_dict(state_dict)
 model.eval() # important!
 config_high = OmegaConf.load('vavae/configs/f16d32_vfdinov2_high.yaml')
 vae_high = AutoencoderKL(
     embed_dim=config_high.model.params.embed_dim,
     ddconfig=config_high.model.params.ddconfig,
-    ckpt_path='/BS/var/work/LightningDiT/vavae/logs/f16d32_vfdinov2_high/checkpoints/last.ckpt',
+    ckpt_path='/path/to/LightningDiT/vavae/logs/f16d32_vfdinov2_high/checkpoints/last.ckpt',
     model_type='vavae',
 ).cuda().eval()
 for param in vae_high.parameters():
@@ -48,7 +48,7 @@ config_low = OmegaConf.load('vavae/configs/f16d32_vfdinov2_low.yaml')
 vae_low = AutoencoderKL(
     embed_dim=config_low.model.params.embed_dim, 
     ddconfig=config_low.model.params.ddconfig,
-    ckpt_path='/BS/var/work/LightningDiT/vavae/logs/f16d32_vfdinov2_low/checkpoints/last.ckpt',
+    ckpt_path='/path/to/LightningDiT/vavae/logs/f16d32_vfdinov2_low/checkpoints/last.ckpt',
     model_type='vavae',
 ).cuda().eval()
 for param in vae_low.parameters():

@@ -51,7 +51,7 @@ def is_main_process():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('VAE Analysis', add_help=False)
     parser.add_argument('--batch_size', default=10, type=int)
-    parser.add_argument('--data_path', default='/BS/var/nobackup/imagenet-1k/', type=str)
+    parser.add_argument('--data_path', default='/path/to/imagenet-1k/', type=str)
     parser.add_argument('--resos', default=256, type=int)
     parser.add_argument('--device', default='cuda', help='device to use for training / testing')
     parser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     clip, preprocess_clip = clip.load('ViT-B/32', device=args.device)
     clip.eval()
     
-    sam = sam_model_registry['vit_b'](checkpoint='/BS/var/work/segment-anything/sam_vit_b_01ec64.pth')
+    sam = sam_model_registry['vit_b'](checkpoint='/path/to/segment-anything/sam_vit_b_01ec64.pth')
     sam = sam.to(args.device).eval()
     sam_predictor = SamPredictor(sam)
 
@@ -182,7 +182,8 @@ if __name__ == '__main__':
     total_images = t.item()
 
     if is_main_process():
-        save_dir = '/BS/var/work/analysis_figures'
+        save_dir = 'outputs/analysis_figures'
+        os.makedirs(save_dir, exist_ok=True)
 
         # visualize some reconstructed images
         visualize_imgs = torch.cat(visualize_imgs, dim=0)

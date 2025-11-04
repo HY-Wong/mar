@@ -9,7 +9,7 @@
 
 # activate Conda environment
 source ~/.bashrc
-conda activate ldm-new
+conda activate ldm
 
 cd ..
 
@@ -25,7 +25,7 @@ echo $MASTER_PORT
 # start command
 srun python3 main_mar.py \
     --batch_size 64 \
-    --data_path /BS/var/nobackup/imagenet-1k \
+    --data_path /path/to/imagenet-1k \
     --vae_embed_dim 64 \
     --vae_type vavae-high-low \
     --diffloss_d 3 \

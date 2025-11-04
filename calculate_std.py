@@ -56,7 +56,7 @@ class ImageDataModule(pl.LightningDataModule):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('AE Analysis', add_help=False)
     parser.add_argument('--batch_size', default=250, type=int)
-    parser.add_argument('--data_path', default='/BS/var/nobackup/imagenet-1k/', type=str)
+    parser.add_argument('--data_path', default='/path/to/imagenet-1k/', type=str)
     parser.add_argument('--resos', default=256, type=int)
     parser.add_argument('--model_type', default='marvae', type=str)
     args = parser.parse_args()
@@ -74,27 +74,27 @@ if __name__ == '__main__':
             ckpt_path="pretrained_models/vae/kl16.ckpt",
         ).to(device)
     elif args.model_type == 'vavae':
-        config = OmegaConf.load('/BS/var/work/LightningDiT/tokenizer/configs/vavae_f16d32.yaml')
+        config = OmegaConf.load('/path/to/LightningDiT/tokenizer/configs/vavae_f16d32.yaml')
         vae = AutoencoderKL(
             embed_dim=32,
             ddconfig=config.model.params.ddconfig,
-            ckpt_path='/BS/var/work/LightningDiT/vavae-imagenet256-f16d32-dinov2.pt',
+            ckpt_path='/path/to/LightningDiT/vavae-imagenet256-f16d32-dinov2.pt',
             model_type='vavae',
         ).to(device)
     elif args.model_type == 'vavae-high':
-        config = OmegaConf.load('/BS/var/work/LightningDiT/vavae/configs/f16d32_vfdinov2_high.yaml')
+        config = OmegaConf.load('/path/to/LightningDiT/vavae/configs/f16d32_vfdinov2_high.yaml')
         vae = AutoencoderKL(
             embed_dim=32,
             ddconfig=config.model.params.ddconfig,
-            ckpt_path='/BS/var/work/LightningDiT/vavae/logs/f16d32_vfdinov2_high/checkpoints/last.ckpt',
+            ckpt_path='/path/to/LightningDiT/vavae/logs/f16d32_vfdinov2_high/checkpoints/last.ckpt',
             model_type='vavae',
         ).to(device)
     elif args.model_type == 'vavae-low':
-        config = OmegaConf.load('/BS/var/work/LightningDiT/vavae/configs/f16d32_vfdinov2_low.yaml')
+        config = OmegaConf.load('/path/to/LightningDiT/vavae/configs/f16d32_vfdinov2_low.yaml')
         vae = AutoencoderKL(
             embed_dim=32, 
             ddconfig=config.model.params.ddconfig,
-            ckpt_path='/BS/var/work/LightningDiT/vavae/logs/f16d32_vfdinov2_low/checkpoints/last.ckpt',
+            ckpt_path='/path/to/LightningDiT/vavae/logs/f16d32_vfdinov2_low/checkpoints/last.ckpt',
             model_type='vavae',
         ).to(device)
     vae.eval()
